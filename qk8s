@@ -15,21 +15,35 @@ function command_exists() {
 
 function check_system {
 
-	#Abort installation if .kube directory exists on the home user in order to not affect other configurations
-	if [ -d "~/.kube" ]; then
-		echo "ERROR - .kube directory exists on user home. Aborting"
-		exit 2 
-	fi
-
+	if [ kubectl cluster-info 2> /dev/null ]; then
+        	echo "ERROR - kubectl is already configured to use an existing cluster"
+	        exit 2
+    	fi
 	#Checking if docker command exists
 	command_exists docker
-	
+	command_exists kubectl
+
 	#Creating install directories
-	mkdir -p $INSTALL_DIR/{bin,etc/manifests,logs}
+	mkdir -p $INSTALL_DIR/{bin,etc/kubernetes/manifests,logs}
 }
 
 function download_kubelet {
 	curl -L -o $INSTALL_DIR/bin/kubelet -z $INSTALL_DIR/bin/kubelet https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/linux/amd64/kubelet && chmod 755 $INSTALL_DIR/bin/kubelet
+}
+
+function copy_kubelet_manifests {
+	cp -Rpf ./manifests/* $INSTALL_DIR/etc/kubernetes/manifests/
+}
+
+function create_k8s_system_namespace {
+    kubectl create -f - << EOF > /dev/null
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: kube-system
+  labels:
+    name: kube-system
+EOF
 }
 
 function start_kubelet {
@@ -38,16 +52,18 @@ function start_kubelet {
 		--address="0.0.0.0"  \
 		--register-node=true \
 		--api-servers=http://localhost:${K8S_API_PORT} \
-		--config=/etc/kubernetes/manifests \
+		--config=$INSTALL_DIR/etc/kubernetes/manifests \
 		--cluster-dns=${K8S_DNS_IP} \
 		--cluster-domain=cluster.local \
-		--allow-privileged=true --v=2
+		--allow-privileged=true --v=2 > $INSTALL_DIR/logs/kubelet.log 2>&1 &
 }
 
 function start_kubernetes {
 	check_system
 	download_kubelet
+	copy_kubelet_manifests
 	start_kubelet
+	create_k8s_system_namespace
 }
 
 
@@ -59,7 +75,8 @@ Usage: qk8s [command]
 
 Available commands:
   up       Quickly Starts Kubernetes in the Docker host currently configured with your local docker command
-  down     Tear down a previously started Kubernetes cluster
+  down     Stop Kubernetes cluster
+  delete   Deletes and stops all Kubernetes cluster objects and containers
   restart  Restart Kubernetes
 EOF
 }
@@ -68,8 +85,13 @@ EOF
 if [ "$1" == "up" ]; then
 	start_kubernetes
 elif [ "$1" == "down" ]; then
+	#TODO
 	stop_kubernetes
+elif [ "$1" == "delete" ]; then
+	#TODO
+	delete_kubernetes
 elif [ "$1" == "restart" ]; then
+	#TODO
 	qk8s down && qk8s up
 else
 	print_usage
