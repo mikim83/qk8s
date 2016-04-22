@@ -66,6 +66,10 @@ function start_kubernetes {
 	create_k8s_system_namespace
 }
 
+function addon_kubernetes {
+	kubectl add -f addons
+
+}
 
 function print_usage {
     cat << EOF
@@ -77,6 +81,7 @@ Available commands:
   up       Quickly Starts Kubernetes in the Docker host currently configured with your local docker command
   down     Stop Kubernetes cluster
   delete   Deletes and stops all Kubernetes cluster objects and containers
+  addon	   Creates addons from addon directory (DNS-addon, etc..)
   restart  Restart Kubernetes
 EOF
 }
@@ -93,6 +98,9 @@ elif [ "$1" == "delete" ]; then
 elif [ "$1" == "restart" ]; then
 	#TODO
 	qk8s down && qk8s up
+elif [ "$1" == "addon" ]; then
+	#TODO
+	addon_kubernetes
 else
 	print_usage
 fi
