@@ -106,8 +106,7 @@ function stop_kubernetes {
 }
 
 function addon_kubernetes {
-	kubectl add -f addons
-
+	kubectl create -f addons
 }
 
 function wait_for_kubernetes {
