@@ -1,9 +1,14 @@
-# qk8s
-Quick Kubernetes (k8s) implementation on Docker
+# qk8s - Quick [Kubernetes](http://kubernetes.io)
 
+Quick Kubernetes (k8s) implementation on linux
 Based on the idea of K.I.D (Kubernetes in Docker): https://github.com/vyshane/kid
 
+
+```
+ ❱ qk8s
+
 qk8s is a utility for Quickly launching Kubernetes in Docker
+
 
 Usage: qk8s [command]
 
@@ -13,3 +18,4 @@ Available commands:
   delete	Deletes and stops all Kubernetes cluster objects and containers
   addon		Creates addons from addon directory (DNS-addon, etc..)
   restart	Restart Kubernetes
+```
