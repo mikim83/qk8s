@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash
 
 INET_INTERFACE="eth0"
 INSTALL_DIR="/opt"
@@ -73,7 +73,7 @@ function addon_kubernetes {
 
 function print_usage {
     cat << EOF
-kid is a utility for Quickly launching Kubernetes in Docker
+qk8s is a utility for Quickly launching Kubernetes in Docker
 
 Usage: qk8s [command]
 
