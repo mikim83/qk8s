@@ -7,15 +7,15 @@ Based on the idea of K.I.D (Kubernetes in Docker): https://github.com/vyshane/ki
 ```
  ❱ qk8s
 
-qk8s is a utility for Quickly launching Kubernetes in Docker
+qk8s is a utility for Quickly launching Kubernetes in a linux machine
 
 
 Usage: qk8s [command]
 
 Available commands:
-  start		Quickly Starts Kubernetes in the Docker host currently configured with your local docker command
+  start		Quickly Starts Kubernetes in the linux host currently configured with your local docker command
   stop		Stop Kubernetes cluster
-  delete	Deletes and stops all Kubernetes cluster objects and containers
+  delete    Deletes and stops all Kubernetes cluster objects and containers
   addon		Creates addons from addon directory (DNS-addon, etc..)
   restart	Restart Kubernetes
 ```
