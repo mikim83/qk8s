@@ -14,7 +14,7 @@ function command_exists() {
 }
 
 function check_system {
-
+	echo "INFO - Checking system requirements"
 	if [ kubectl cluster-info 2> /dev/null ]; then
         	echo "ERROR - kubectl is already configured to use an existing cluster"
 	        exit 2
@@ -24,19 +24,23 @@ function check_system {
 	command_exists kubectl
 
 	#Creating install directories
-	mkdir -p $INSTALL_DIR/{bin,etc/kubernetes/manifests,logs}
+	echo "INFO - Creating dirs"
+	mkdir -p $INSTALL_DIR/{bin,etc/kubernetes/manifests,logs,run,kubelet}
 }
 
 function download_kubelet {
-	curl -L -o $INSTALL_DIR/bin/kubelet -z $INSTALL_DIR/bin/kubelet https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/linux/amd64/kubelet && chmod 755 $INSTALL_DIR/bin/kubelet
+	echo "INFO - Downloading kubelet binary version $K8S_VERSION"
+	curl -s -L -o $INSTALL_DIR/bin/kubelet -z $INSTALL_DIR/bin/kubelet https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/linux/amd64/kubelet && chmod 755 $INSTALL_DIR/bin/kubelet
 }
 
 function copy_kubelet_manifests {
+	echo "INFO - Copying basic kubernetes manifests"
 	cp -Rpf ./manifests/* $INSTALL_DIR/etc/kubernetes/manifests/
 }
 
 function create_k8s_system_namespace {
-    kubectl create -f - << EOF > /dev/null
+
+    kubectl create -f - << EOF > /dev/null 2>&1
 kind: Namespace
 apiVersion: v1
 metadata:
@@ -47,6 +51,8 @@ EOF
 }
 
 function start_kubelet {
+	echo "INFO - Starting kubelet:$K8S_VERSION"
+
 	$INSTALL_DIR/bin/kubelet \
         	--hostname-override=${K8S_HOSTNAME} \
 		--address="0.0.0.0"  \
@@ -55,7 +61,32 @@ function start_kubelet {
 		--config=$INSTALL_DIR/etc/kubernetes/manifests \
 		--cluster-dns=${K8S_DNS_IP} \
 		--cluster-domain=cluster.local \
-		--allow-privileged=true --v=2 > $INSTALL_DIR/logs/kubelet.log 2>&1 &
+		--allow-privileged=true --v=2 \
+		--root-dir="$INSTALL_DIR/kubelet" \
+		--log-dir="$INSTALL_DIR/logs/" > $INSTALL_DIR/logs/kubelet.log 2>&1 &
+	pidof kubelet > $INSTALL_DIR/run/kubelet.pid
+}
+
+function stop_kubelet {
+	if [ -f $INSTALL_DIR/run/kubelet.pid ];then
+		echo "INFO - Killing kubelet"
+		kill -9 `cat $INSTALL_DIR/run/kubelet.pid`
+		rm $INSTALL_DIR/run/kubelet.pid
+	else
+		echo "WARNING - kubelet PID file not found. Performing a killall. Hold on your pants"
+		killall -9 kubelet
+	fi
+}
+function stop_k8s_containers {
+
+	k8s_containers=$(docker ps -aqf "name=k8s_")
+	echo "INFO - Stopping k8s_ containers"
+	if [ ! -z "$k8s_containers" ]; then
+		docker stop $k8s_containers > /dev/null 2>&1
+		docker wait $k8s_containers > /dev/null 2>&1
+		docker rm -fv $k8s_containers > /dev/null 2>&1
+	fi
+
 }
 
 function start_kubernetes {
@@ -63,12 +94,27 @@ function start_kubernetes {
 	download_kubelet
 	copy_kubelet_manifests
 	start_kubelet
+	wait_for_kubernetes
 	create_k8s_system_namespace
+	echo "INFO - Starteg kubernetes version $K8S_VERSION"
+
+}
+
+function stop_kubernetes {
+	stop_kubelet
+	stop_k8s_containers
 }
 
 function addon_kubernetes {
 	kubectl add -f addons
 
+}
+
+function wait_for_kubernetes {
+	echo "INFO - Waiting for kubernetes to become ready"
+	until $(kubectl cluster-info &> /dev/null); do
+		sleep 1
+	done
 }
 
 function print_usage {
@@ -78,19 +124,18 @@ qk8s is a utility for Quickly launching Kubernetes in Docker
 Usage: qk8s [command]
 
 Available commands:
-  up       Quickly Starts Kubernetes in the Docker host currently configured with your local docker command
-  down     Stop Kubernetes cluster
-  delete   Deletes and stops all Kubernetes cluster objects and containers
-  addon	   Creates addons from addon directory (DNS-addon, etc..)
-  restart  Restart Kubernetes
+  start		Quickly Starts Kubernetes in the Docker host currently configured with your local docker command
+  stop		Stop Kubernetes cluster
+  delete	Deletes and stops all Kubernetes cluster objects and containers
+  addon		Creates addons from addon directory (DNS-addon, etc..)
+  restart	Restart Kubernetes
 EOF
 }
 
 
-if [ "$1" == "up" ]; then
+if [ "$1" == "start" ]; then
 	start_kubernetes
-elif [ "$1" == "down" ]; then
-	#TODO
+elif [ "$1" == "stop" ]; then
 	stop_kubernetes
 elif [ "$1" == "delete" ]; then
 	#TODO
