@@ -108,6 +108,35 @@ function stop_kubernetes {
 	stop_k8s_containers
 }
 
+function delete_kubelet {
+	echo "INFO - Deleting kubelet binary"
+	rm -rf $INSTALL_DIR/bin/kubelet
+}
+
+function umount_tokens {
+	echo "INFO - Umounting tokens fs"
+	for fs in `mount | grep "$INSTALL_DIR/kubelet/pods/" | awk '{print $3}'`; do
+		umount $fs
+	done
+}
+
+function delete_files {
+	echo "INFO - Deleting POD files, logs, etc..."
+	rm -rf $INSTALL_DIR/etc
+	rm -rf $INSTALL_DIR/logs
+	rm -rf $INSTALL_DIR/run
+	rm -rf $INSTALL_DIR/kubelet
+}
+
+function delete_kubernetes {
+	stop_kubelet
+	stop_k8s_containers
+	umount_tokens
+	delete_kubelet
+	delete_files
+	echo "INFO - Kubernetes cluster deleted"
+}
+
 function addon_kubernetes {
 	kubectl create -f addons
 }
@@ -140,13 +169,10 @@ if [ "$1" == "start" ]; then
 elif [ "$1" == "stop" ]; then
 	stop_kubernetes
 elif [ "$1" == "delete" ]; then
-	#TODO
 	delete_kubernetes
 elif [ "$1" == "restart" ]; then
-	#TODO
 	qk8s down && qk8s up
 elif [ "$1" == "addon" ]; then
-	#TODO
 	addon_kubernetes
 else
 	print_usage
