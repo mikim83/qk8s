@@ -99,7 +99,7 @@ function start_kubernetes {
 	start_kubelet
 	wait_for_kubernetes
 	create_k8s_system_namespace
-	echo "INFO - Starteg kubernetes version $K8S_VERSION"
+	echo "INFO - Starting kubernetes version $K8S_VERSION"
 
 }
 
