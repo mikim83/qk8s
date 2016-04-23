@@ -54,7 +54,7 @@ spec:
             cpu: 100m
             memory: 500Mi
           requests:
-            cpu: 100m
+            cpu: 10m
             memory: 50Mi
         command:
         - /usr/local/bin/etcd
@@ -81,7 +81,7 @@ spec:
             # Kube2sky watches all pods.
             memory: 200Mi
           requests:
-            cpu: 100m
+            cpu: 10m
             memory: 50Mi
         livenessProbe:
           httpGet:
@@ -115,7 +115,7 @@ spec:
             cpu: 100m
             memory: 200Mi
           requests:
-            cpu: 100m
+            cpu: 10m
             memory: 50Mi
         args:
         # command = "/skydns"
