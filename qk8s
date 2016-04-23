@@ -1,7 +1,10 @@
 #!/bin/bash
 
-INET_INTERFACE="eth0"
+#Choosing the default gateway interface
+INET_INTERFACE=`netstat -rn | head -3 | tail -1 | awk '{print $8}'`
+#Install directory by default
 INSTALL_DIR="/opt"
+#Kubernetes version (see https://github.com/kubernetes/kubernetes/releases) 
 K8S_VERSION="v1.2.2"
 K8S_API_PORT="8080"
 K8S_DNS_IP="10.0.0.10"
