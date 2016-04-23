@@ -7,11 +7,11 @@
     "containers": [
       {
         "name": "kube-proxy",
-        "image": "gcr.io/google_containers/hyperkube-amd64:v1.2.2",
+        "image": "gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION}",
         "command": [
                 "/hyperkube",
                 "proxy",
-                "--master=http://127.0.0.1:8080",
+                "--master=http://${K8S_HOSTNAME}:8080",
                 "--v=2",
                 "--resource-container=\"\""
         ],

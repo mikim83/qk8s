@@ -38,7 +38,12 @@ function download_kubelet {
 
 function copy_kubelet_manifests {
 	echo "INFO - Copying basic kubernetes manifests"
-	cp -Rpf ./manifests/* $INSTALL_DIR/etc/kubernetes/manifests/
+	#cp -Rpf ./manifests/* $INSTALL_DIR/etc/kubernetes/manifests/
+	for file in `ls ./manifests` ; do
+		cat ./manifests/$file | \
+		sed "s/\${K8S_VERSION}/${K8S_VERSION}/" | \
+		sed "s/\${K8S_HOSTNAME}/${K8S_HOSTNAME}/" > $INSTALL_DIR/etc/kubernetes/manifests/$file
+	done
 }
 
 function create_k8s_system_namespace {
@@ -60,7 +65,7 @@ function start_kubelet {
         	--hostname-override=${K8S_HOSTNAME} \
 		--address="0.0.0.0"  \
 		--register-node=true \
-		--api-servers=http://localhost:${K8S_API_PORT} \
+		--api-servers=http://$K8S_HOSTNAME:${K8S_API_PORT} \
 		--config=$INSTALL_DIR/etc/kubernetes/manifests \
 		--cluster-dns=${K8S_DNS_IP} \
 		--cluster-domain=cluster.local \
@@ -68,6 +73,12 @@ function start_kubelet {
 		--root-dir="$INSTALL_DIR/kubelet" \
 		--log-dir="$INSTALL_DIR/logs/" > $INSTALL_DIR/logs/kubelet.log 2>&1 &
 	pidof kubelet > $INSTALL_DIR/run/kubelet.pid
+}
+
+function config_kubectl {
+	kubectl config set-cluster qk8s --server=http://$K8S_HOSTNAME:8080
+	kubectl config set-context qk8s --cluster=qk8s
+	kubectl config use-context qk8s
 }
 
 function stop_kubelet {
@@ -97,6 +108,7 @@ function start_kubernetes {
 	download_kubelet
 	copy_kubelet_manifests
 	start_kubelet
+	config_kubectl
 	wait_for_kubernetes
 	create_k8s_system_namespace
 	echo "INFO - Starting kubernetes version $K8S_VERSION"
