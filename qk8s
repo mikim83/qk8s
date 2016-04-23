@@ -111,7 +111,8 @@ function start_kubernetes {
 	config_kubectl
 	wait_for_kubernetes
 	create_k8s_system_namespace
-	echo "INFO - Starting kubernetes version $K8S_VERSION"
+	echo "INFO - Started kubernetes version $K8S_VERSION"
+	kubectl cluster-info
 
 }
 
