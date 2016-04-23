@@ -152,6 +152,7 @@ function delete_kubernetes {
 
 function addon_kubernetes {
 	kubectl create -f addons
+	kubectl cluster-info
 }
 
 function wait_for_kubernetes {
