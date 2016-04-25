@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #Choosing the default gateway interface
 INET_INTERFACE=`netstat -rn | head -3 | tail -1 | awk '{print $8}'`
 #Install directory by default
 INSTALL_DIR="/opt/qk8s"
-#Kubernetes version (see https://github.com/kubernetes/kubernetes/releases) 
+#Kubernetes version (see https://github.com/kubernetes/kubernetes/releases)
 K8S_VERSION="v1.2.3"
 K8S_API_PORT="8080"
 K8S_DNS_IP="10.0.0.10"
@@ -12,13 +12,38 @@ K8S_HOSTNAME=`/sbin/ifconfig $INET_INTERFACE | grep "inet addr" | awk -F: '{prin
 
 
 function command_exists() {
-        command -v "$1" >/dev/null 2>&1 || \
-	    { echo "ERROR - $1 is required but is not installed. Aborting." >&2; exit 2; }
+        if [ `which "$1"` ]; then
+		echo "INFO - found $1 command"
+	else
+		if [ "$1" == "kubectl" ]; then
+			read -r -p "Kubectl not found. Do want me to install it on $INSTALL_DIR/bin? [Y/n] " response
+			case $response in
+				[yY][eE][sS]|[yY])
+					if [ "$(uname)" == "Darwin" ]; then
+						echo "INFO - Downloading kubectl into $INSTALL_DIR/bin/kubectl"
+						curl -s -L -o $INSTALL_DIR/bin/kubectl -z $INSTALL_DIR/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/darwin/amd64/kubectl && chmod 755 $INSTALL_DIR/bin/kubectl
+						echo "WARNING - Remember to add $INSTALL_DIR/bin/kubectl to your \$PATH env variable"
+					elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+						echo "INFO - Downloading kubectl into $INSTALL_DIR/bin/kubectl"
+						curl -s -L -o $INSTALL_DIR/bin/kubectl -z $INSTALL_DIR/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/linux/amd64/kubectl && chmod 755 $INSTALL_DIR/bin/kubectl
+						echo "WARNING - Remember to add $INSTALL_DIR/bin/kubectl to your \$PATH env variable"
+					fi
+					;;
+				*)
+					echo "ERROR - $1 is required but is not installed. Aborting."
+					exit 2
+				        ;;
+			esac
+		else
+			echo "ERROR - $1 is required but is not installed. Aborting."
+			exit 2
+		fi
+	fi
 }
 
 function check_system {
 	echo "INFO - Checking system requirements"
-	if [ kubectl cluster-info 2> /dev/null ]; then
+	if [ $INSTALL_DIR/bin/kubectl cluster-info 2> /dev/null ]; then
         	echo "ERROR - kubectl is already configured to use an existing cluster"
 	        exit 2
     	fi
@@ -48,7 +73,7 @@ function copy_kubelet_manifests {
 
 function create_k8s_system_namespace {
 
-    kubectl create -f - << EOF > /dev/null 2>&1
+    $INSTALL_DIR/bin/kubectl create -f - << EOF > /dev/null 2>&1
 kind: Namespace
 apiVersion: v1
 metadata:
@@ -76,9 +101,9 @@ function start_kubelet {
 }
 
 function config_kubectl {
-	kubectl config set-cluster qk8s --server=http://$K8S_HOSTNAME:8080
-	kubectl config set-context qk8s --cluster=qk8s
-	kubectl config use-context qk8s
+	$INSTALL_DIR/bin/kubectl config set-cluster qk8s --server=http://$K8S_HOSTNAME:8080
+	$INSTALL_DIR/bin/kubectl config set-context qk8s --cluster=qk8s
+	$INSTALL_DIR/bin/kubectl config use-context qk8s
 }
 
 function stop_kubelet {
@@ -112,7 +137,7 @@ function start_kubernetes {
 	wait_for_kubernetes
 	create_k8s_system_namespace
 	echo "INFO - Started kubernetes version $K8S_VERSION"
-	kubectl cluster-info
+	$INSTALL_DIR/bin/kubectl cluster-info
 
 }
 
@@ -151,13 +176,13 @@ function delete_kubernetes {
 }
 
 function addon_kubernetes {
-	kubectl create -f addons
-	kubectl cluster-info
+	$INSTALL_DIR/bin/kubectl create -f addons
+	$INSTALL_DIR/bin/kubectl cluster-info
 }
 
 function wait_for_kubernetes {
 	echo "INFO - Waiting for kubernetes to become ready"
-	until $(kubectl cluster-info &> /dev/null); do
+	until $($INSTALL_DIR/bin/kubectl cluster-info &> /dev/null); do
 		sleep 1
 	done
 }
