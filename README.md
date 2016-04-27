@@ -19,3 +19,12 @@ Available commands:
   addon		Creates addons from addon directory (DNS-addon, etc..)
   restart	Restart Kubernetes
 ```
+# Addons:
+ - Dns Addon
+ - Dashboard UI
+ - Heapster
+
+# Examples:
+ - Selenium Hub (default external port: 31999)
+ - Selenium node Chrome
+ - Selenium node Firefox
