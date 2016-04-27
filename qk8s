@@ -178,6 +178,7 @@ function delete_kubernetes {
 }
 
 function addon_kubernetes {
+	check_system
 	$K8S_CLIENT create -f addons
 	$K8S_CLIENT cluster-info
 }
