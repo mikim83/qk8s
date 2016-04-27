@@ -55,7 +55,7 @@ function check_system {
 
 	#Creating install directories
 	echo "INFO - Creating dirs"
-	mkdir -p $INSTALL_DIR/{bin,etc/kubernetes/manifests,logs,run,kubelet}
+	mkdir -p $INSTALL_DIR/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs}
 }
 
 function download_kubelet {
@@ -65,11 +65,11 @@ function download_kubelet {
 
 function copy_kubelet_manifests {
 	echo "INFO - Copying basic kubernetes manifests"
-	#cp -Rpf ./manifests/* $INSTALL_DIR/etc/kubernetes/manifests/
 	for file in `ls ./manifests` ; do
 		cat ./manifests/$file | \
-		sed "s/\${K8S_VERSION}/${K8S_VERSION}/" | \
-		sed "s/\${K8S_HOSTNAME}/${K8S_HOSTNAME}/" > $INSTALL_DIR/etc/kubernetes/manifests/$file
+		sed "s|\${K8S_VERSION}|${K8S_VERSION}|g" | \
+		sed "s|\${K8S_HOSTNAME}|${K8S_HOSTNAME}|g" | \
+		sed "s|\${INSTALL_DIR}|${INSTALL_DIR}|g" > $INSTALL_DIR/etc/kubernetes/manifests/$file
 	done
 }
 
@@ -103,9 +103,16 @@ function start_kubelet {
 }
 
 function config_kubectl {
-	$K8S_CLIENT config set-cluster qk8s --server=http://$K8S_HOSTNAME:8080
-	$K8S_CLIENT config set-context qk8s --cluster=qk8s
-	$K8S_CLIENT config use-context qk8s
+
+	$K8S_CLIENT config set-cluster qk8s-insecure --server=http://$K8S_HOSTNAME:8080
+	$K8S_CLIENT config set-context qk8s-insecure --cluster=qk8s-insecure
+
+	$K8S_CLIENT config set-cluster qk8s --server=https://$K8S_HOSTNAME --certificate-authority=$INSTALL_DIR/certs/ca.crt
+	$K8S_CLIENT config set-credentials qk8s --certificate-authority=$INSTALL_DIR/certs/ca.crt --client-key=$INSTALL_DIR/certs/kubecfg.key --client-certificate=$INSTALL_DIR/certs/kubecfg.crt
+	$K8S_CLIENT config set-context qk8s --cluster=qk8s --user=qk8s
+
+	$K8S_CLIENT config use-context qk8s-insecure
+
 }
 
 function stop_kubelet {
@@ -140,7 +147,7 @@ function start_kubernetes {
 	create_k8s_system_namespace
 	echo "INFO - Started kubernetes version $K8S_VERSION"
 	$K8S_CLIENT cluster-info
-
+        $K8S_CLIENT config use-context qk8s
 }
 
 function stop_kubernetes {
