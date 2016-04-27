@@ -1,13 +1,11 @@
-apiVersion: v1
-kind: ReplicationController
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
   name: selenium-hub 
   labels:
     app: selenium-hub
 spec:
   replicas: 1
-  selector:
-    app: selenium-hub
   template:
     metadata:
       labels:
