@@ -9,7 +9,7 @@ K8S_VERSION="v1.2.3"
 K8S_API_PORT="8080"
 K8S_DNS_IP="10.0.0.10"
 K8S_HOSTNAME=`/sbin/ifconfig $INET_INTERFACE | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
-
+K8S_CLIENT=kubectl
 
 function command_exists() {
         if [ `which "$1"` ]; then
@@ -22,10 +22,12 @@ function command_exists() {
 					if [ "$(uname)" == "Darwin" ]; then
 						echo "INFO - Downloading kubectl into $INSTALL_DIR/bin/kubectl"
 						curl -s -L -o $INSTALL_DIR/bin/kubectl -z $INSTALL_DIR/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/darwin/amd64/kubectl && chmod 755 $INSTALL_DIR/bin/kubectl
+						K8S_CLIENT=$INSTALL_DIR/bin/kubectl
 						echo "WARNING - Remember to add $INSTALL_DIR/bin/kubectl to your \$PATH env variable"
 					elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
 						echo "INFO - Downloading kubectl into $INSTALL_DIR/bin/kubectl"
 						curl -s -L -o $INSTALL_DIR/bin/kubectl -z $INSTALL_DIR/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/linux/amd64/kubectl && chmod 755 $INSTALL_DIR/bin/kubectl
+						K8S_CLIENT=$INSTALL_DIR/bin/kubectl
 						echo "WARNING - Remember to add $INSTALL_DIR/bin/kubectl to your \$PATH env variable"
 					fi
 					;;
@@ -43,7 +45,7 @@ function command_exists() {
 
 function check_system {
 	echo "INFO - Checking system requirements"
-	if [ $INSTALL_DIR/bin/kubectl cluster-info 2> /dev/null ]; then
+	if [ $K8S_CLIENT cluster-info 2> /dev/null ]; then
         	echo "ERROR - kubectl is already configured to use an existing cluster"
 	        exit 2
     	fi
@@ -73,7 +75,7 @@ function copy_kubelet_manifests {
 
 function create_k8s_system_namespace {
 
-    $INSTALL_DIR/bin/kubectl create -f - << EOF > /dev/null 2>&1
+    $K8S_CLIENT create -f - << EOF > /dev/null 2>&1
 kind: Namespace
 apiVersion: v1
 metadata:
@@ -101,9 +103,9 @@ function start_kubelet {
 }
 
 function config_kubectl {
-	$INSTALL_DIR/bin/kubectl config set-cluster qk8s --server=http://$K8S_HOSTNAME:8080
-	$INSTALL_DIR/bin/kubectl config set-context qk8s --cluster=qk8s
-	$INSTALL_DIR/bin/kubectl config use-context qk8s
+	$K8S_CLIENT config set-cluster qk8s --server=http://$K8S_HOSTNAME:8080
+	$K8S_CLIENT config set-context qk8s --cluster=qk8s
+	$K8S_CLIENT config use-context qk8s
 }
 
 function stop_kubelet {
@@ -137,7 +139,7 @@ function start_kubernetes {
 	wait_for_kubernetes
 	create_k8s_system_namespace
 	echo "INFO - Started kubernetes version $K8S_VERSION"
-	$INSTALL_DIR/bin/kubectl cluster-info
+	$K8S_CLIENT cluster-info
 
 }
 
@@ -176,13 +178,13 @@ function delete_kubernetes {
 }
 
 function addon_kubernetes {
-	$INSTALL_DIR/bin/kubectl create -f addons
-	$INSTALL_DIR/bin/kubectl cluster-info
+	$K8S_CLIENT create -f addons
+	$K8S_CLIENT cluster-info
 }
 
 function wait_for_kubernetes {
 	echo "INFO - Waiting for kubernetes to become ready"
-	until $($INSTALL_DIR/bin/kubectl cluster-info &> /dev/null); do
+	until $($K8S_CLIENT cluster-info &> /dev/null); do
 		sleep 1
 	done
 }
