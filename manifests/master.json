@@ -79,8 +79,10 @@
   ],
   "volumes": [
     {
-      "name": "data",
-      "emptyDir": {}
+       "name": "data",
+       "hostPath": {
+          "path": "${INSTALL_DIR}/certs"
+          }
     }
   ]
  }
