@@ -20,13 +20,13 @@ function command_exists() {
 			case $response in
 				[yY][eE][sS]|[yY])
 					if [ "$(uname)" == "Darwin" ]; then
-						echo "INFO - Downloading kubectl into $INSTALL_DIR/bin/kubectl"
-						curl -s -L -o $INSTALL_DIR/bin/kubectl -z $INSTALL_DIR/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/darwin/amd64/kubectl && chmod 755 $INSTALL_DIR/bin/kubectl
+						echo "INFO - Downloading kubectl for $(uname) into $INSTALL_DIR/bin/kubectl"
+						curl -s -L -o $INSTALL_DIR/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/darwin/amd64/kubectl ; chmod 755 $INSTALL_DIR/bin/kubectl
 						K8S_CLIENT=$INSTALL_DIR/bin/kubectl
 						echo "WARNING - Remember to add $INSTALL_DIR/bin/kubectl to your \$PATH env variable"
-					elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-						echo "INFO - Downloading kubectl into $INSTALL_DIR/bin/kubectl"
-						curl -s -L -o $INSTALL_DIR/bin/kubectl -z $INSTALL_DIR/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/linux/amd64/kubectl && chmod 755 $INSTALL_DIR/bin/kubectl
+					elif [ "$(uname)" == "Linux" ]; then
+						echo "INFO - Downloading kubectl for $(uname) into $INSTALL_DIR/bin/kubectl"
+						curl -s -L -o $INSTALL_DIR/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/linux/amd64/kubectl ; chmod 755 $INSTALL_DIR/bin/kubectl
 						K8S_CLIENT=$INSTALL_DIR/bin/kubectl
 						echo "WARNING - Remember to add $INSTALL_DIR/bin/kubectl to your \$PATH env variable"
 					fi
@@ -45,17 +45,18 @@ function command_exists() {
 
 function check_system {
 	echo "INFO - Checking system requirements"
+
 	if [ $K8S_CLIENT cluster-info 2> /dev/null ]; then
         	echo "ERROR - kubectl is already configured to use an existing cluster"
 	        exit 2
     	fi
 	#Checking if docker command exists
 	command_exists docker
-	command_exists kubectl
-
 	#Creating install directories
 	echo "INFO - Creating dirs"
 	mkdir -p $INSTALL_DIR/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs}
+	command_exists kubectl
+
 }
 
 function download_kubelet {
