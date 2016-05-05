@@ -248,7 +248,7 @@ function wait_for_kubernetes {
 
 function print_usage {
     cat << EOF
-qk8s is a utility for Quickly launching Kubernetes in Docker
+qk8s is a utility for Quickly launching Kubernetes Multinode Cluster in linux machines
 
 Usage: qk8s [command]
 
