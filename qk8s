@@ -115,6 +115,7 @@ function start_kubelet_slave {
 	$INSTALL_DIR/bin/kubelet \
 		--api_servers=http://${K8S_MASTER}:${K8S_API_PORT} \
 		--register-node=true \
+		--hostname-override=${K8S_HOSTNAME} \
 		--config=$INSTALL_DIR/etc/kubernetes/manifests \
 		--cluster-dns=${K8S_DNS_IP} \
 		--cluster-domain=cluster.local \
