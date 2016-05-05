@@ -51,11 +51,11 @@ function check_system {
     	fi
 	#Checking if docker command exists
 	command_exists docker
-	command_exists kubectl
 
 	#Creating install directories
 	echo "INFO - Creating dirs"
 	mkdir -p $INSTALL_DIR/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs}
+	command_exists kubectl
 }
 
 function download_kubelet {
