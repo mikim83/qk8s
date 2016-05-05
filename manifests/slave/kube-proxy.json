@@ -1,0 +1,24 @@
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {"name":"k8s-proxy"},
+  "spec": {
+    "hostNetwork": true,
+    "containers": [
+      {
+        "name": "kube-proxy",
+        "image": "gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION}",
+        "command": [
+                "/hyperkube",
+                "proxy",
+                "--master=http://${K8S_MASTER}:8080",
+                "--v=2",
+                "--resource-container=\"\""
+        ],
+        "securityContext": {
+          "privileged": true
+        }
+      }
+    ]
+  }
+}
