@@ -251,11 +251,11 @@ qk8s is a utility for Quickly launching Kubernetes in Docker
 Usage: qk8s [command]
 
 Available commands:
-  start		Quickly Starts Kubernetes in the Docker host currently configured with your local docker command
-  stop		Stop Kubernetes cluster
-  delete	Deletes and stops all Kubernetes cluster objects and containers
-  addon		Creates addons from addon directory (DNS-addon, etc..)
-  restart	Restart Kubernetes
+  start	[master|slave] [master ip]	Quickly Starts Kubernetes in the Docker host. Master or Slave + Master ip is mandatory.
+  stop					Stop Kubernetes cluster
+  delete				Deletes and stops all Kubernetes cluster objects and containers
+  addon					Creates addons from addon directory (DNS-addon, etc..)
+  restart				Restart Kubernetes
 EOF
 }
 
@@ -264,7 +264,7 @@ if [ "$1" == "start" ]; then
 	if [ "$2" == "master" ]; then
 		start_kubernetes_master
 	elif [ "$2" == "slave" ]; then
-		if [[ $ =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]];then
+		if [[ ${K8S_MASTER} =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]];then
 			start_kubernetes_slave
 		else
 			echo "ERROR - Bad Master Ip Address"
