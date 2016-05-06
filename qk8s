@@ -43,6 +43,16 @@ function command_exists() {
 	fi
 }
 
+function prepare_docker {
+
+	echo "INFO - Stoping Docker Daemon"
+	service docker stop
+	source /run/flannel/subnet.env
+	ifconfig docker0 ${FLANNEL_SUBNET}
+	echo "INFO - Starting Docker Daemon"
+	docker daemon --bip=${FLANNEL_SUBNET} --mtu=${FLANNEL_MTU} > /dev/null 2>&1 &
+}
+
 function check_system {
 	echo "INFO - Checking system requirements"
 	if [ $K8S_CLIENT cluster-info 2> /dev/null ]; then
@@ -217,8 +227,9 @@ function start_kubernetes_master {
 	check_system
 	download_kubelet
 	copy_kubelet_manifests_master
-	start_kubelet_master
 	start_flannel_master
+	prepare_docker
+	start_kubelet_master
 	config_kubectl_master
 	wait_for_kubernetes
 	config_flannel_master
@@ -233,6 +244,7 @@ function start_kubernetes_slave {
 	download_kubelet
 	config_kubectl_slave
 	copy_kubelet_manifests_slave
+	start_flannel_slave
 	start_kubelet_slave
 	start_flannel_slave
 	wait_for_kubernetes
