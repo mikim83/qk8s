@@ -15,6 +15,11 @@ function command_exists() {
         if [ `which "$1"` ]; then
 		echo "INFO - found $1 command"
 	else
+		if [ "$1" == "docker" ]; then
+			echo "INFO - Installing latest Docker Daemon"
+			curl -fsSL https://get.docker.com/ | sh
+		fi
+
 		if [ "$1" == "kubectl" ]; then
 			read -r -p "Kubectl not found. Do want me to install it on $INSTALL_DIR/bin? [Y/n] " response
 			case $response in
@@ -49,8 +54,13 @@ function prepare_docker {
 	service docker stop
 	source /run/flannel/subnet.env
 	ifconfig docker0 ${FLANNEL_SUBNET}
+	if [ -f /lib/systemd/system/docker.service ]; then
+		echo "INFO - Patching docker.service systemd file"
+		patch -p0 -b /lib/systemd/system/docker.service patch/docker.service.patch
+		systemctl daemon-reload
+	fi
 	echo "INFO - Starting Docker Daemon"
-	docker daemon --bip=${FLANNEL_SUBNET} --mtu=${FLANNEL_MTU} > /dev/null 2>&1 &
+	service docker start
 }
 
 function check_system {
@@ -279,6 +289,15 @@ function delete_files {
 	rm -rf $INSTALL_DIR/kubelet
 }
 
+function restore_docker {
+	if [ -f /lib/systemd/system/docker.service.orig ]; then
+		echo "INFO - Restoring docker"
+		mv /lib/systemd/system/docker.service.orig /lib/systemd/system/docker.service
+		systemctl daemon-reload
+		service docker restart
+	fi
+}
+
 function delete_kubernetes {
 	stop_kubelet
 	stop_flannel
@@ -286,6 +305,7 @@ function delete_kubernetes {
 	umount_tokens
 	delete_kubelet
 	delete_files
+	restore_docker
 	echo "INFO - Kubernetes cluster deleted"
 }
 
