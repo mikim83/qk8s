@@ -49,13 +49,15 @@ function check_system {
         	echo "ERROR - kubectl is already configured to use an existing cluster"
 	        exit 2
     	fi
-	#Checking if docker command exists
 	command_exists docker
 
-	#Creating install directories
 	echo "INFO - Creating dirs"
 	mkdir -p $INSTALL_DIR/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs}
+
 	command_exists kubectl
+	echo "INFO - Installing Flanneld overlay network daemon"
+	curl -s -L -o /tmp/flannel-0.5.5-linux-amd64.tar.gz https://github.com/coreos/flannel/releases/download/v0.5.5/flannel-0.5.5-linux-amd64.tar.gz ; tar -xzf /tmp/flannel-0.5.5-linux-amd64.tar.gz -C /tmp ; cp /tmp/flannel-0.5.5/flanneld ${INSTALL_DIR}/bin/ ; rm -rf /tmp/flannel-0.5.5*
+
 }
 
 function download_kubelet {
@@ -96,6 +98,12 @@ metadata:
 EOF
 }
 
+function config_flannel_master {
+
+curl -X PUT -d "value={\"Network\":\"10.0.0.0/16\",\"Backend\":{\"Type\":\"vxlan\"}}" "http://${K8S_HOSTNAME}:4001/v2/keys/flannel/network/config"
+
+}
+
 function start_kubelet_master {
 	echo "INFO - Starting master kubelet:$K8S_VERSION"
 
@@ -127,6 +135,24 @@ function start_kubelet_slave {
 		--log-dir="$INSTALL_DIR/logs/" > $INSTALL_DIR/logs/kubelet.log 2>&1 &
 	sleep 1
 	pidof kubelet > $INSTALL_DIR/run/kubelet.pid
+}
+
+function start_flannel_master {
+	echo "INFO - Starting Flannel Daemon"
+	${INSTALL_DIR}/bin/flanneld \
+	-etcd-endpoints="http://${K8S_HOSTNAME}:4001" \
+	-etcd-prefix="/flannel/network"  > $INSTALL_DIR/logs/flanneld.log 2>&1 &
+	sleep 1
+	pidof flanneld > $INSTALL_DIR/run/flanneld.pid
+}
+
+function start_flannel_slave {
+	echo "INFO - Starting Flannel Daemon"
+	${INSTALL_DIR}/bin/flanneld \
+	-etcd-endpoints="http://${K8S_MASTER}:4001" \
+	-etcd-prefix="/flannel/network"  > $INSTALL_DIR/logs/flanneld.log 2>&1 &
+	sleep 1
+	pidof flanneld > $INSTALL_DIR/run/flanneld.pid
 }
 
 function config_kubectl_master {
@@ -164,6 +190,16 @@ function stop_kubelet {
 		killall -9 kubelet
 	fi
 }
+function stop_flannel {
+	if [ -f $INSTALL_DIR/run/flanneld.pid ];then
+		echo "INFO - Killing flannel"
+		kill -9 `cat $INSTALL_DIR/run/flanneld.pid`
+		rm $INSTALL_DIR/run/flanneld.pid
+	else
+		echo "WARNING - flanneld PID file not found. Performing a killall. Hold on your pants"
+		killall -9 flanneld
+	fi
+}
 function stop_k8s_containers {
 
 	k8s_containers=$(docker ps -aqf "name=k8s_")
@@ -181,8 +217,10 @@ function start_kubernetes_master {
 	download_kubelet
 	copy_kubelet_manifests_master
 	start_kubelet_master
+	start_flannel_master
 	config_kubectl_master
 	wait_for_kubernetes
+	config_flannel_master
 	create_k8s_system_namespace
 	echo "INFO - Started master kubernetes version $K8S_VERSION"
 	$K8S_CLIENT cluster-info
@@ -195,6 +233,7 @@ function start_kubernetes_slave {
 	config_kubectl_slave
 	copy_kubelet_manifests_slave
 	start_kubelet_slave
+	start_flannel_slave
 	wait_for_kubernetes
 	echo "INFO - Started slave kubernetes version $K8S_VERSION"
 	$K8S_CLIENT cluster-info
@@ -203,6 +242,7 @@ function start_kubernetes_slave {
 
 function stop_kubernetes {
 	stop_kubelet
+	stop_flannel
 	stop_k8s_containers
 }
 
@@ -228,6 +268,7 @@ function delete_files {
 
 function delete_kubernetes {
 	stop_kubelet
+	stop_flannel
 	stop_k8s_containers
 	umount_tokens
 	delete_kubelet
