@@ -255,6 +255,7 @@ function start_kubernetes_slave {
 	config_kubectl_slave
 	copy_kubelet_manifests_slave
 	start_flannel_slave
+	prepare_docker
 	start_kubelet_slave
 	start_flannel_slave
 	wait_for_kubernetes
