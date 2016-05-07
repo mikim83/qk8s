@@ -52,7 +52,7 @@ function prepare_docker {
 	echo "INFO - Stoping Docker Daemon"
 	service docker stop
 	source /run/flannel/subnet.env
-	#ifconfig docker0 ${FLANNEL_SUBNET}
+	ifconfig docker0 ${FLANNEL_SUBNET}
 	if [ -f /lib/systemd/system/docker.service ]; then
 		echo "INFO - Patching docker.service systemd file"
 		patch -p0 -b /lib/systemd/system/docker.service patch/docker.service.patch
