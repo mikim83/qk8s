@@ -159,9 +159,9 @@ function start_kubelet_slave {
 function start_flannel_master {
 	echo "INFO - Starting Flannel Daemon"
 	${INSTALL_DIR}/bin/flanneld \
-	-etcd-endpoints="http://${K8S_HOSTNAME}:4001" \
-	-etcd-prefix="/flannel/network" \
-	-ip-masq=true > $INSTALL_DIR/logs/flanneld.log 2>&1 &
+	--etcd-endpoints="http://${K8S_HOSTNAME}:4001" \
+	--etcd-prefix="/flannel/network" \
+	--ip-masq=true > $INSTALL_DIR/logs/flanneld.log 2>&1 &
 	sleep 1
 	pidof flanneld > $INSTALL_DIR/run/flanneld.pid
 }
