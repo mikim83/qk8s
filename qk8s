@@ -23,20 +23,13 @@ function command_exists() {
 		fi
 	else
 		if [ "$1" == "kubectl" ]; then
-			read -r -p "Kubectl not found. Do want me to install it on $INSTALL_DIR/bin? [Y/n] " response
+			read -r -p "Kubectl not found. Do want me to install it on ${INSTALL_DIR}/bin? [Y/n] " response
 			case $response in
 				[yY][eE][sS]|[yY])
-					if [ "$(uname)" == "Darwin" ]; then
-						echo "INFO - Downloading kubectl into $INSTALL_DIR/bin/kubectl"
-						curl -s -L -o $INSTALL_DIR/bin/kubectl -z $INSTALL_DIR/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/darwin/amd64/kubectl && chmod 755 $INSTALL_DIR/bin/kubectl
-						K8S_CLIENT=$INSTALL_DIR/bin/kubectl
-						echo "WARNING - Remember to add $INSTALL_DIR/bin/kubectl to your \$PATH env variable"
-					elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-						echo "INFO - Downloading kubectl into $INSTALL_DIR/bin/kubectl"
-						curl -s -L -o $INSTALL_DIR/bin/kubectl -z $INSTALL_DIR/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/linux/amd64/kubectl && chmod 755 $INSTALL_DIR/bin/kubectl
-						K8S_CLIENT=$INSTALL_DIR/bin/kubectl
-						echo "WARNING - Remember to add $INSTALL_DIR/bin/kubectl to your \$PATH env variable"
-					fi
+					echo "INFO - Downloading kubectl into ${INSTALL_DIR}/bin/kubectl"
+					curl -s -L -o ${INSTALL_DIR}/bin/kubectl -z ${INSTALL_DIR}/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$K8S_VERSION/bin/linux/amd64/kubectl && chmod 755 ${INSTALL_DIR}/bin/kubectl
+					K8S_CLIENT=${INSTALL_DIR}/bin/kubectl
+					echo "WARNING - Remember to add ${INSTALL_DIR}/bin/kubectl to your \$PATH env variable"
 					;;
 				*)
 					echo "ERROR - $1 is required but is not installed. Aborting."
@@ -71,14 +64,14 @@ function prepare_docker {
 
 function check_system {
 	echo "INFO - Checking system requirements"
-	if [ $K8S_CLIENT cluster-info 2> /dev/null ]; then
+	if [ ${K8S_CLIENT} cluster-info 2> /dev/null ]; then
         	echo "ERROR - kubectl is already configured to use an existing cluster"
 	        exit 2
     	fi
 	command_exists docker
 
 	echo "INFO - Creating dirs"
-	mkdir -p $INSTALL_DIR/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs}
+	mkdir -p ${INSTALL_DIR}/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs}
 
 	command_exists kubectl
 
@@ -115,7 +108,7 @@ function copy_kubelet_manifests_slave {
 
 function create_k8s_system_namespace {
 
-    $K8S_CLIENT create -f - << EOF > /dev/null 2>&1
+    ${K8S_CLIENT} create -f - << EOF > /dev/null 2>&1
 kind: Namespace
 apiVersion: v1
 metadata:
@@ -141,34 +134,34 @@ function config_flannel_master {
 function start_kubelet_master {
 	echo "INFO - Starting master kubelet:$K8S_VERSION"
 
-	$INSTALL_DIR/bin/kubelet \
+	${INSTALL_DIR}/bin/kubelet \
         	--hostname-override=${K8S_HOSTNAME} \
 		--address="0.0.0.0"  \
 		--register-node=true \
 		--api-servers=http://$K8S_HOSTNAME:${K8S_API_PORT} \
-		--config=$INSTALL_DIR/etc/kubernetes/manifests \
+		--config=${INSTALL_DIR}/etc/kubernetes/manifests \
 		--cluster-dns=${K8S_DNS_IP} \
 		--cluster-domain=cluster.local \
 		--allow-privileged=true --v=2 \
-		--root-dir="$INSTALL_DIR/kubelet" \
-		--log-dir="$INSTALL_DIR/logs/" > $INSTALL_DIR/logs/kubelet.log 2>&1 &
+		--root-dir="${INSTALL_DIR}/kubelet" \
+		--log-dir="${INSTALL_DIR}/logs/" > ${INSTALL_DIR}/logs/kubelet.log 2>&1 &
 	sleep 1
-	pidof kubelet > $INSTALL_DIR/run/kubelet.pid
+	pidof kubelet > ${INSTALL_DIR}/run/kubelet.pid
 }
 function start_kubelet_slave {
 	echo "INFO - Starting slave kubelet:$K8S_VERSION"
-	$INSTALL_DIR/bin/kubelet \
+	${INSTALL_DIR}/bin/kubelet \
 		--api_servers=http://${K8S_MASTER}:${K8S_API_PORT} \
 		--register-node=true \
 		--hostname-override=${K8S_HOSTNAME} \
-		--config=$INSTALL_DIR/etc/kubernetes/manifests \
+		--config=${INSTALL_DIR}/etc/kubernetes/manifests \
 		--cluster-dns=${K8S_DNS_IP} \
 		--cluster-domain=cluster.local \
 		--allow-privileged=true --v=2 \
-		--root-dir="$INSTALL_DIR/kubelet" \
-		--log-dir="$INSTALL_DIR/logs/" > $INSTALL_DIR/logs/kubelet.log 2>&1 &
+		--root-dir="${INSTALL_DIR}/kubelet" \
+		--log-dir="${INSTALL_DIR}/logs/" > ${INSTALL_DIR}/logs/kubelet.log 2>&1 &
 	sleep 1
-	pidof kubelet > $INSTALL_DIR/run/kubelet.pid
+	pidof kubelet > ${INSTALL_DIR}/run/kubelet.pid
 }
 
 function start_flannel_master {
@@ -176,60 +169,60 @@ function start_flannel_master {
 	${INSTALL_DIR}/bin/flanneld \
 	--etcd-endpoints="http://${K8S_HOSTNAME}:4001" \
 	--etcd-prefix="/flannel/network" \
-	--ip-masq=true > $INSTALL_DIR/logs/flanneld.log 2>&1 &
+	--ip-masq=true > ${INSTALL_DIR}/logs/flanneld.log 2>&1 &
 	sleep 1
-	pidof flanneld > $INSTALL_DIR/run/flanneld.pid
+	pidof flanneld > ${INSTALL_DIR}/run/flanneld.pid
 }
 
 function start_flannel_slave {
 	echo "INFO - Starting Flannel Daemon"
 	${INSTALL_DIR}/bin/flanneld \
 	-etcd-endpoints="http://${K8S_MASTER}:4001" \
-	-etcd-prefix="/flannel/network"  > $INSTALL_DIR/logs/flanneld.log 2>&1 &
+	-etcd-prefix="/flannel/network"  > ${INSTALL_DIR}/logs/flanneld.log 2>&1 &
 	sleep 1
-	pidof flanneld > $INSTALL_DIR/run/flanneld.pid
+	pidof flanneld > ${INSTALL_DIR}/run/flanneld.pid
 }
 
 function config_kubectl_master {
 
-	$K8S_CLIENT config set-cluster qk8s-insecure --server=http://${K8S_HOSTNAME}:8080
-	$K8S_CLIENT config set-context qk8s-insecure --cluster=qk8s-insecure
+	${K8S_CLIENT} config set-cluster qk8s-insecure --server=http://${K8S_HOSTNAME}:8080
+	${K8S_CLIENT} config set-context qk8s-insecure --cluster=qk8s-insecure
 
-	$K8S_CLIENT config set-cluster qk8s --server=https://${K8S_HOSTNAME} --certificate-authority=$INSTALL_DIR/certs/ca.crt
-	$K8S_CLIENT config set-credentials qk8s --certificate-authority=$INSTALL_DIR/certs/ca.crt --client-key=$INSTALL_DIR/certs/kubecfg.key --client-certificate=$INSTALL_DIR/certs/kubecfg.crt
-	$K8S_CLIENT config set-context qk8s --cluster=qk8s --user=qk8s
+	${K8S_CLIENT} config set-cluster qk8s --server=https://${K8S_HOSTNAME} --certificate-authority=${INSTALL_DIR}/certs/ca.crt
+	${K8S_CLIENT} config set-credentials qk8s --certificate-authority=${INSTALL_DIR}/certs/ca.crt --client-key=${INSTALL_DIR}/certs/kubecfg.key --client-certificate=${INSTALL_DIR}/certs/kubecfg.crt
+	${K8S_CLIENT} config set-context qk8s --cluster=qk8s --user=qk8s
 
-	$K8S_CLIENT config use-context qk8s-insecure
+	${K8S_CLIENT} config use-context qk8s-insecure
 
 }
 function config_kubectl_slave {
 
-	$K8S_CLIENT config set-cluster qk8s-insecure --server=http://${K8S_MASTER}:8080
-	$K8S_CLIENT config set-context qk8s-insecure --cluster=qk8s-insecure
+	${K8S_CLIENT} config set-cluster qk8s-insecure --server=http://${K8S_MASTER}:8080
+	${K8S_CLIENT} config set-context qk8s-insecure --cluster=qk8s-insecure
 
-	#$K8S_CLIENT config set-cluster qk8s --server=https://${K8S_MASTER} --certificate-authority=$INSTALL_DIR/certs/ca.crt
-	#$K8S_CLIENT config set-credentials qk8s --certificate-authority=$INSTALL_DIR/certs/ca.crt --client-key=$INSTALL_DIR/certs/kubecfg.key --client-certificate=$INSTALL_DIR/certs/kubecfg.crt
-	#$K8S_CLIENT config set-context qk8s --cluster=qk8s --user=qk8s
+	#${K8S_CLIENT} config set-cluster qk8s --server=https://${K8S_MASTER} --certificate-authority=${INSTALL_DIR}/certs/ca.crt
+	#${K8S_CLIENT} config set-credentials qk8s --certificate-authority=${INSTALL_DIR}/certs/ca.crt --client-key=${INSTALL_DIR}/certs/kubecfg.key --client-certificate=${INSTALL_DIR}/certs/kubecfg.crt
+	#${K8S_CLIENT} config set-context qk8s --cluster=qk8s --user=qk8s
 
-	$K8S_CLIENT config use-context qk8s-insecure
+	${K8S_CLIENT} config use-context qk8s-insecure
 
 }
 
 function stop_kubelet {
-	if [ -f $INSTALL_DIR/run/kubelet.pid ];then
+	if [ -f ${INSTALL_DIR}/run/kubelet.pid ];then
 		echo "INFO - Killing kubelet"
-		kill -9 `cat $INSTALL_DIR/run/kubelet.pid`
-		rm $INSTALL_DIR/run/kubelet.pid
+		kill -9 `cat ${INSTALL_DIR}/run/kubelet.pid`
+		rm ${INSTALL_DIR}/run/kubelet.pid
 	else
 		echo "WARNING - kubelet PID file not found. Performing a killall. Hold on your pants"
 		killall -9 kubelet
 	fi
 }
 function stop_flannel {
-	if [ -f $INSTALL_DIR/run/flanneld.pid ];then
+	if [ -f ${INSTALL_DIR}/run/flanneld.pid ];then
 		echo "INFO - Killing flannel"
-		kill -9 `cat $INSTALL_DIR/run/flanneld.pid`
-		rm $INSTALL_DIR/run/flanneld.pid
+		kill -9 `cat ${INSTALL_DIR}/run/flanneld.pid`
+		rm ${INSTALL_DIR}/run/flanneld.pid
 	else
 		echo "WARNING - flanneld PID file not found. Performing a killall. Hold on your pants"
 		killall -9 flanneld
@@ -259,8 +252,8 @@ function start_kubernetes_master {
 	wait_for_kubernetes
 	create_k8s_system_namespace
 	echo "INFO - Started master kubernetes version $K8S_VERSION"
-	$K8S_CLIENT cluster-info
-        $K8S_CLIENT config use-context qk8s
+	${K8S_CLIENT} cluster-info
+        ${K8S_CLIENT} config use-context qk8s
 }
 
 function start_kubernetes_slave {
@@ -274,8 +267,8 @@ function start_kubernetes_slave {
 	start_flannel_slave
 	wait_for_kubernetes
 	echo "INFO - Started slave kubernetes version $K8S_VERSION"
-	$K8S_CLIENT cluster-info
-        #$K8S_CLIENT config use-context qk8s
+	${K8S_CLIENT} cluster-info
+        #${K8S_CLIENT} config use-context qk8s
 }
 
 function stop_kubernetes {
@@ -286,23 +279,24 @@ function stop_kubernetes {
 
 function delete_kubelet {
 	echo "INFO - Deleting kubelet binary"
-	rm -rf $INSTALL_DIR/bin/kubelet
+	rm -rf ${INSTALL_DIR}/bin/kubelet
 }
 
 function umount_tokens {
 	echo "INFO - Umounting tokens fs"
-	for fs in `mount | grep "$INSTALL_DIR/kubelet/pods/" | awk '{print $3}'`; do
+	for fs in `mount | grep "${INSTALL_DIR}/kubelet/pods/" | awk '{print $3}'`; do
 		umount $fs
 	done
 }
 
 function delete_files {
 	echo "INFO - Deleting POD files, logs, etc..."
-	rm -rf $INSTALL_DIR/etc
-	rm -rf $INSTALL_DIR/logs
-	rm -rf $INSTALL_DIR/run
-	rm -rf $INSTALL_DIR/bin
-	rm -rf $INSTALL_DIR/certs
+	rm -rf ${INSTALL_DIR}/etc
+	rm -rf ${INSTALL_DIR}/logs
+	rm -rf ${INSTALL_DIR}/run
+	rm -rf ${INSTALL_DIR}/bin
+	rm -rf ${INSTALL_DIR}/certs
+	rm -rf ${INSTALL_DIR}/kubelet
 	rm -rf /run/flannel/subnet.env
 }
 
@@ -328,15 +322,15 @@ function delete_kubernetes {
 
 function addon_kubernetes {
 	check_system
-	$K8S_CLIENT create -f addons
-	$K8S_CLIENT cluster-info
+	${K8S_CLIENT} create -f addons
+	${K8S_CLIENT} cluster-info
 }
 
 function wait_for_kubernetes {
 	spin='-\|/'
 	i=0
 	echo "INFO - Waiting for kubernetes to become ready"
-	until $($K8S_CLIENT cluster-info &> /dev/null); do
+	until $(${K8S_CLIENT} cluster-info &> /dev/null); do
 		i=$(( (i+1) %4 ))
 		printf "\r${spin:$i:1}"
 		sleep .5
