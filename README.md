@@ -18,9 +18,23 @@ Available commands:
   restart				Restart Kubernetes
 ```
 
-# TODO:
+# Installing intrucions:
+ - Install a clean version of one if the supported OS
+ - Install master node: 
+```
 
- - Use flannel network for container inter-host communication
+   $ sudo ./qk8s start master
+```
+ - Install slave node:
+```
+   $ sudo ./qk8s start slave $MASTER_IP
+```
+
+ - MASTER node and SLAVE node must have network reachability
+
+# Supported O.S. :
+	- Ubuntu Linux 16.04
+	- Ubuntu Linux 14.04
 
 # Addons:
  - Dns Addon
