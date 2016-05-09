@@ -73,6 +73,18 @@ function prepare_docker {
 		patch -p0 -b /lib/systemd/system/docker.service patch/docker.service.patch
 		systemctl daemon-reload
 	fi
+	if [ -f /etc/default/docker ]; then
+		if [ `grep QK8S_CONFIG /etc/default/docker` ]; then
+			echo "INFO - /etc/default/docker already patched"
+		else
+			echo "INFO - patching /etc/default/docker"
+			cat <<EOT >> /etc/default/docker
+#QK8S_CONFIG
+. /run/flannel/subnet.env
+DOCKER_OPTS="--bip=${FLANNEL_SUBNET} --mtu=${FLANNEL_MTU} --ip-masq=${FLANNEL_IPMASQ} ${DOCKER_OPTS}"
+EOT
+		fi
+	fi
 	echo "INFO - Starting Docker Daemon"
 	service docker start
 }
@@ -324,8 +336,12 @@ function restore_docker {
 		echo "INFO - Restoring docker"
 		mv /lib/systemd/system/docker.service.orig /lib/systemd/system/docker.service
 		systemctl daemon-reload
-		service docker restart
 	fi
+	if [ `grep QK8S_CONFIG /etc/default/docker` ];then 
+		sed -i -e :a -e '$d;N;2,3ba' -e 'P;D' /etc/default/docker
+	fi
+	service docker restart
+
 }
 
 function delete_kubernetes {
