@@ -5,7 +5,7 @@ INET_INTERFACE=`netstat -rn | head -3 | tail -1 | awk '{print $8}'`
 #Install directory by default
 INSTALL_DIR="/opt/qk8s"
 #Kubernetes version (see https://github.com/kubernetes/kubernetes/releases)
-K8S_VERSION="v1.2.3"
+K8S_VERSION="v1.2.4"
 K8S_API_PORT="8080"
 K8S_DNS_IP="10.0.0.10"
 K8S_HOSTNAME=`/sbin/ifconfig $INET_INTERFACE | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
