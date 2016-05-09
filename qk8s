@@ -1,15 +1,30 @@
 #!/usr/bin/env bash 
+
 #Choosing the default gateway interface
 INET_INTERFACE=`netstat -rn | head -3 | tail -1 | awk '{print $8}'`
 #Install directory by default
 INSTALL_DIR="/opt/qk8s"
 #Kubernetes version (see https://github.com/kubernetes/kubernetes/releases)
 K8S_VERSION="v1.2.3"
+#Kubernetes API port for master node
 K8S_API_PORT="8080"
-K8S_DNS_IP="10.0.0.10"
+#Kubernetes node ip
 K8S_HOSTNAME=`/sbin/ifconfig $INET_INTERFACE | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
+#Kubernetes default client
 K8S_CLIENT=kubectl
+#Kubernetes Master Ip (in case we are starting up an slave node)
 K8S_MASTER=$3
+
+#The CIDR network to use for pod IPs
+POD_NETWORK=172.16.0.0/16
+#The CIDR network to use for service cluster VIPs (Virtual IPs)
+SERVICE_IP_RANGE=172.17.0.0/16
+#The VIP (Virtual IP) address of the Kubernetes API Service
+K8S_SERVICE_IP=172.17.0.1
+#The VIP (Virtual IP) address of the cluster DNS service
+DNS_SERVICE_IP=172.17.0.10
+
+
 function command_exists() {
         if [ `which "$1"` ]; then
 		echo "INFO - found $1 command"
@@ -91,6 +106,8 @@ function copy_kubelet_manifests_master {
 		cat ./manifests/master/$file | \
 		sed "s|\${K8S_VERSION}|${K8S_VERSION}|g" | \
 		sed "s|\${K8S_HOSTNAME}|${K8S_HOSTNAME}|g" | \
+		sed "s|\${SERVICE_IP_RANGE}|${SERVICE_IP_RANGE}|g" | \
+		sed "s|\${K8S_SERVICE_IP}|${K8S_SERVICE_IP}|g" | \
 		sed "s|\${INSTALL_DIR}|${INSTALL_DIR}|g" > ${INSTALL_DIR}/etc/kubernetes/manifests/$file
 	done
 }
@@ -100,6 +117,8 @@ function copy_kubelet_manifests_slave {
 		cat ./manifests/slave/$file | \
 		sed "s|\${K8S_VERSION}|${K8S_VERSION}|g" | \
 		sed "s|\${K8S_HOSTNAME}|${K8S_HOSTNAME}|g" | \
+		sed "s|\${SERVICE_IP_RANGE}|${SERVICE_IP_RANGE}|g" | \
+		sed "s|\${K8S_SERVICE_IP}|${K8S_SERVICE_IP}|g" | \
 		sed "s|\${INSTALL_DIR}|${INSTALL_DIR}|g" | \
 		sed "s|\${K8S_MASTER}|${K8S_MASTER}|g" > ${INSTALL_DIR}/etc/kubernetes/manifests/$file
 	done
@@ -127,7 +146,7 @@ function config_flannel_master {
 		printf "\r${spin:$i:1}"
 		sleep .5
 	done
-	curl -X PUT -d "value={\"Network\":\"10.0.0.0/16\",\"Backend\":{\"Type\":\"vxlan\"}}" "http://${K8S_HOSTNAME}:4001/v2/keys/flannel/network/config"
+	curl -X PUT -d "value={\"Network\":\"${POD_NETWORK}\",\"Backend\":{\"Type\":\"vxlan\"}}" "http://${K8S_HOSTNAME}:4001/v2/keys/flannel/network/config"
 	echo "INFO - Flanneld configuration stored in etcd"
 }
 
@@ -138,9 +157,9 @@ function start_kubelet_master {
         	--hostname-override=${K8S_HOSTNAME} \
 		--address="0.0.0.0"  \
 		--register-node=true \
-		--api-servers=http://$K8S_HOSTNAME:${K8S_API_PORT} \
+		--api-servers=http://${K8S_HOSTNAME}:${K8S_API_PORT} \
 		--config=${INSTALL_DIR}/etc/kubernetes/manifests \
-		--cluster-dns=${K8S_DNS_IP} \
+		--cluster-dns=${DNS_SERVICE_IP} \
 		--cluster-domain=cluster.local \
 		--allow-privileged=true --v=2 \
 		--root-dir="${INSTALL_DIR}/kubelet" \
@@ -155,7 +174,7 @@ function start_kubelet_slave {
 		--register-node=true \
 		--hostname-override=${K8S_HOSTNAME} \
 		--config=${INSTALL_DIR}/etc/kubernetes/manifests \
-		--cluster-dns=${K8S_DNS_IP} \
+		--cluster-dns=${DNS_SERVICE_IP} \
 		--cluster-domain=cluster.local \
 		--allow-privileged=true --v=2 \
 		--root-dir="${INSTALL_DIR}/kubelet" \

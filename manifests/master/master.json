@@ -33,7 +33,7 @@
                 "command": [
                     "/hyperkube",
                     "apiserver",
-                    "--service-cluster-ip-range=10.0.0.0/16",
+                    "--service-cluster-ip-range=${SERVICE_IP_RANGE}",
                     "--insecure-bind-address=${K8S_HOSTNAME}",
                     "--advertise-address=${K8S_HOSTNAME}",
                     "--secure-port=443",
@@ -83,7 +83,7 @@
                 "image": "gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION}",
                 "command": [
                     "/setup-files.sh",
-                    "IP:10.0.0.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:kubernetes.default.svc.cluster.local"
+                    "IP:${K8S_SERVICE_IP},DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:kubernetes.default.svc.cluster.local"
                 ],
                 "volumeMounts": [
                     {
