@@ -5,7 +5,7 @@ INET_INTERFACE=`netstat -rn | head -3 | tail -1 | awk '{print $8}'`
 #Install directory by default
 INSTALL_DIR="/opt/qk8s"
 #Kubernetes version (see https://github.com/kubernetes/kubernetes/releases)
-K8S_VERSION="v1.2.3"
+K8S_VERSION="v1.2.4"
 #Kubernetes API port for master node
 K8S_API_PORT="8080"
 #Kubernetes node ip
