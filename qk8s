@@ -70,8 +70,11 @@ function prepare_docker {
 	ifconfig docker0 ${FLANNEL_SUBNET}
 	if [ -f /lib/systemd/system/docker.service ]; then
 		echo "INFO - Patching docker.service systemd file"
-		patch -p0 -b /lib/systemd/system/docker.service patch/docker.service.patch
-		systemctl daemon-reload
+		patch -p0 -b -N --dry-run --silent /lib/systemd/system/docker.service patch/docker.service.patch 1> /dev/null 2>/dev/null
+		if [ $? -eq 0 ]; then
+			patch -p0 -b /lib/systemd/system/docker.service patch/docker.service.patch
+		fi
+		systemctl daemon-reload 1> /dev/null 2>/dev/null
 	fi
 	if [ -f /etc/default/docker ]; then
 		if [ `grep QK8S_CONFIG /etc/default/docker` ]; then
@@ -81,7 +84,7 @@ function prepare_docker {
 			cat <<EOT >> /etc/default/docker
 #QK8S_CONFIG
 . /run/flannel/subnet.env
-DOCKER_OPTS="--bip=${FLANNEL_SUBNET} --mtu=${FLANNEL_MTU} --ip-masq=${FLANNEL_IPMASQ} ${DOCKER_OPTS}"
+DOCKER_OPTS="--bip=${FLANNEL_SUBNET} --mtu=${FLANNEL_MTU} --ip-masq=${FLANNEL_IPMASQ} \${DOCKER_OPTS}"
 EOT
 		fi
 	fi
