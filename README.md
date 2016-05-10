@@ -33,8 +33,8 @@ Available commands:
  - MASTER node and SLAVE node must have network reachability
 
 # Supported O.S. :
-	- Ubuntu Linux 16.04
-	- Ubuntu Linux 14.04
+ - Ubuntu Linux 16.04
+ - Ubuntu Linux 14.04
 
 # Addons:
  - Dns Addon
