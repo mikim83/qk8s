@@ -1,0 +1,5 @@
+12c12,13
+< ExecStart=/usr/bin/docker daemon -H fd://
+---
+> EnvironmentFile=/opt/qk8s/run/subnet.env
+> ExecStart=/usr/bin/docker daemon -H fd:// --bip=${FLANNEL_SUBNET} --mtu=${FLANNEL_MTU} --ip-masq=${FLANNEL_IPMASQ}

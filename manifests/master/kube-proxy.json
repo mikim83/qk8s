@@ -11,9 +11,10 @@
         "command": [
                 "/hyperkube",
                 "proxy",
+                "--proxy-mode=iptables",
                 "--master=http://${K8S_HOSTNAME}:8080",
-                "--v=2",
-                "--resource-container=\"\""
+                "--hostname-override=${K8S_HOSTNAME}",
+                "--v=2"
         ],
         "securityContext": {
           "privileged": true
