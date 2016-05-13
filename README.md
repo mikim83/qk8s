@@ -45,3 +45,4 @@ Available commands:
  - Selenium Hub (default external port: 31999)
  - Selenium node Chrome
  - Selenium node Firefox
+ - Secrets and ConfigMaps objects examples with busybox pod
