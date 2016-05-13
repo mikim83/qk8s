@@ -106,15 +106,23 @@ function check_system {
 	mkdir -p ${INSTALL_DIR}/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs}
 
 	command_exists kubectl
-
-	echo "INFO - Installing Flanneld overlay network daemon"
-	curl -s -L -o /tmp/flannel-0.5.5-linux-amd64.tar.gz https://github.com/coreos/flannel/releases/download/v0.5.5/flannel-0.5.5-linux-amd64.tar.gz ; tar -xzf /tmp/flannel-0.5.5-linux-amd64.tar.gz -C /tmp ; cp /tmp/flannel-0.5.5/flanneld ${INSTALL_DIR}/bin/ ; rm -rf /tmp/flannel-0.5.5*
+	download_flannel
 
 }
+function download_flannel {
+	echo "INFO - Installing Flanneld overlay network daemon"
 
+	if [ -f ${INSTALL_DIR}/bin/flanneld ]; then
+		echo "INFO - Flanneld already installed"
+	else
+		curl -s -L -o /tmp/flannel-0.5.5-linux-amd64.tar.gz https://github.com/coreos/flannel/releases/download/v0.5.5/flannel-0.5.5-linux-amd64.tar.gz ; tar -xzf /tmp/flannel-0.5.5-linux-amd64.tar.gz -C /tmp ; cp /tmp/flannel-0.5.5/flanneld ${INSTALL_DIR}/bin/ ; rm -rf /tmp/flannel-0.5.5*
+	fi
+}
 function download_kubelet {
+
 	echo "INFO - Downloading kubelet binary version $K8S_VERSION"
 	curl -s -L -o ${INSTALL_DIR}/bin/kubelet -z ${INSTALL_DIR}/bin/kubelet https://storage.googleapis.com/kubernetes-release/release/${K8S_VERSION}/bin/linux/amd64/kubelet && chmod 755 ${INSTALL_DIR}/bin/kubelet
+
 }
 
 function copy_kubelet_manifests_master {
