@@ -103,7 +103,7 @@ function check_system {
 	command_exists docker
 
 	echo "INFO - Creating dirs"
-	mkdir -p ${INSTALL_DIR}/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs}
+	mkdir -p ${INSTALL_DIR}/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs,unit_files}
 
 	command_exists kubectl
 	download_flannel
@@ -192,6 +192,21 @@ function start_kubelet_master {
 	sleep 1
 	pidof kubelet > ${INSTALL_DIR}/run/kubelet.pid
 }
+function create_kubelet_master {
+	echo "INFO - Creating master systemd unit file"
+	echo "[Unit]
+        Description="Kubelet Master"
+        Requires=docker.service
+        Requires=flanneld.service
+        After=docker.service
+        After=flanneld.service
+	[Service]
+	ExecStart=${INSTALL_DIR}/bin/kubelet --hostname-override=${K8S_HOSTNAME} --address="0.0.0.0" --register-node=true --api-servers=http://${K8S_HOSTNAME}:${K8S_API_PORT} --config=${INSTALL_DIR}/etc/kubernetes/manifests --cluster-dns=${DNS_SERVICE_IP} --cluster-domain=cluster.local --allow-privileged=true --v=2 --root-dir="${INSTALL_DIR}/kubelet" --log-dir="${INSTALL_DIR}/logs/"
+	Restart=always
+	RestartSec=10
+	[Install]
+	WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/kubelet.service
+}
 function start_kubelet_slave {
 	echo "INFO - Starting slave kubelet:$K8S_VERSION"
 	${INSTALL_DIR}/bin/kubelet \
@@ -207,6 +222,30 @@ function start_kubelet_slave {
 	sleep 1
 	pidof kubelet > ${INSTALL_DIR}/run/kubelet.pid
 }
+function create_kubelet_slave {
+	echo "INFO - Creating slave systemd unit file"
+        echo "[Unit]
+        Description="Kubelet slave"
+        Requires=docker.service
+        Requires=flanneld.service
+        After=docker.service
+        After=flanneld.service
+	[Service]
+	ExecStart=${INSTALL_DIR}/bin/kubelet \
+		--api_servers=http://${K8S_MASTER}:${K8S_API_PORT} \
+		--register-node=true \
+		--hostname-override=${K8S_HOSTNAME} \
+		--config=${INSTALL_DIR}/etc/kubernetes/manifests \
+		--cluster-dns=${DNS_SERVICE_IP} \
+		--cluster-domain=cluster.local \
+		--allow-privileged=true --v=2 \
+		--root-dir="${INSTALL_DIR}/kubelet" \
+		--log-dir="${INSTALL_DIR}/logs/"
+        Restart=always
+        RestartSec=10
+        [Install]
+        WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/kubelet.service
+}
 
 function start_flannel_master {
 	echo "INFO - Starting Flannel Daemon"
@@ -218,6 +257,19 @@ function start_flannel_master {
 	sleep 1
 	pidof flanneld > ${INSTALL_DIR}/run/flanneld.pid
 }
+function create_flannel_master {
+	echo "INFO - Creating Flannel Master Systemd Unit Files"
+	echo "[Unit]
+	Description="Flannel Master"
+	Requires=docker.service
+	After=docker.service
+	[Service]
+	ExecStart=${INSTALL_DIR}/bin/flanneld --etcd-endpoints="http://${K8S_HOSTNAME}:4001" --etcd-prefix="/flannel/network" --subnet-file="${INSTALL_DIR}/run/subnet.env" --ip-masq=true
+	Restart=always
+	RestartSec=10
+	[Install]
+	WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/flanneld.service
+}
 
 function start_flannel_slave {
 	echo "INFO - Starting Flannel Daemon"
@@ -228,6 +280,19 @@ function start_flannel_slave {
 	--ip-masq=true > ${INSTALL_DIR}/logs/flanneld.log 2>&1 &
 	sleep 1
 	pidof flanneld > ${INSTALL_DIR}/run/flanneld.pid
+}
+function create_flannel_slave {
+	echo "INFO - Creating Flannel Slave Systemd Unit Files"
+	echo "[Unit]
+        Description="Flannel Slaver"
+        Requires=docker.service
+        After=docker.service
+	[Service]
+	ExecStart=${INSTALL_DIR}/bin/flanneld --etcd-endpoints="http://${K8S_MASTER}:4001" --etcd-prefix="/flannel/network" --subnet-file="${INSTALL_DIR}/run/subnet.env" --ip-masq=true
+	Restart=always
+	RestartSec=10
+	[Install]
+	WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/flanneld.service
 }
 
 function config_kubectl_master {
@@ -294,6 +359,8 @@ function start_kubernetes_master {
 	start_kubelet_master
 	config_flannel_master
 	start_flannel_master
+	create_flannel_master
+	create_kubelet_master
 	prepare_docker
 	config_kubectl_master
 	wait_for_kubernetes
@@ -309,8 +376,10 @@ function start_kubernetes_slave {
 	config_kubectl_slave
 	copy_kubelet_manifests_slave
 	start_flannel_slave
+	create_flannel_slave
 	prepare_docker
 	start_kubelet_slave
+	create_kubelet_slave
 	start_flannel_slave
 	wait_for_kubernetes
 	echo "INFO - Started slave kubernetes version $K8S_VERSION"
@@ -337,13 +406,24 @@ function umount_tokens {
 }
 
 function delete_files {
-	echo "INFO - Deleting POD files, logs, etc..."
+	echo "INFO - Deleting POD files, logs, init, systemd, etc."
 	rm -rf ${INSTALL_DIR}/etc
 	rm -rf ${INSTALL_DIR}/logs
 	rm -rf ${INSTALL_DIR}/run
 	rm -rf ${INSTALL_DIR}/bin
 	rm -rf ${INSTALL_DIR}/certs
 	rm -rf ${INSTALL_DIR}/kubelet
+	rm -rf ${INSTALL_DIR}/unit_files
+        source /etc/lsb-release
+        if [ "$DISTRIB_RELEASE" == "16.04" ];then
+                rm -rf /lib/systemd/system/kubelet.service 2> /dev/null 1>/dev/null
+                rm -rf /lib/systemd/system/flanneld.service 2> /dev/null 1>/dev/null
+                systemctl daemon-reload
+        else
+                rm -rf /etc/init/kubelet.conf 2> /dev/null 1>/dev/null
+                rm -rf /etc/init/flanneld.conf 2> /dev/null 1>/dev/null
+        fi
+
 }
 
 function restore_docker {
@@ -376,6 +456,19 @@ function addon_kubernetes {
 	${K8S_CLIENT} cluster-info
 }
 
+function init_kubernetes {
+	check_system
+	source /etc/lsb-release
+	if [ "$DISTRIB_RELEASE" == "16.04" ];then
+		echo "Ubuntu $DISTRIB_RELEASE detected. Using systemd files"
+		cp -Rfp ${INSTALL_DIR}/unit_files/*.service /lib/systemd/system/
+		systemctl daemon-reload
+	else
+		echo "Ubuntu $DISTRIB_RELEASE detected. Using upstart files"
+		cp -Rfp ${INSTALL_DIR}/unit_files/*.conf /etc/init
+	fi
+}
+
 function wait_for_kubernetes {
 	spin='-\|/'
 	i=0
@@ -401,6 +494,7 @@ Available commands:
   stop					Stop Kubernetes cluster
   delete				Deletes and stops all Kubernetes cluster objects and containers
   addon					Creates addons from addon directory (DNS-addon, etc..)
+  init					Creates init files for Systemd and Upstart
   restart				Restart Kubernetes
 EOF
 }
@@ -428,6 +522,8 @@ elif [ "$1" == "restart" ]; then
 	qk8s down && qk8s up
 elif [ "$1" == "addon" ]; then
 	addon_kubernetes
+elif [ "$1" == "init" ]; then
+	init_kubernetes
 else
 	print_usage
 fi
