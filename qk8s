@@ -208,7 +208,7 @@ function create_kubelet_master {
 	WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/kubelet.service
 
         echo "
-	start on runlevel [2345]
+	start on (runlevel [2345] and started docker)
 	stop on runlevel [!2345]
 	respawn
 	pre-start script
@@ -269,7 +269,7 @@ function create_kubelet_slave {
         WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/kubelet.service
 
         echo "
-	start on runlevel [2345]
+	start on (runlevel [2345] and started docker)
 	stop on runlevel [!2345]
 	respawn
 	pre-start script
@@ -311,7 +311,7 @@ function create_flannel_master {
 	WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/flanneld.service
 
         echo "
-        start on runlevel [2345]
+        start on (runlevel [2345] and started docker)
         stop on runlevel [!2345]
         respawn
 	exec ${INSTALL_DIR}/bin/flanneld --etcd-endpoints="http://${K8S_HOSTNAME}:4001" --etcd-prefix="/flannel/network" --subnet-file="${INSTALL_DIR}/run/subnet.env" --ip-masq=true"> ${INSTALL_DIR}/unit_files/flanneld.conf
@@ -341,7 +341,7 @@ function create_flannel_slave {
 	WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/flanneld.service
 
         echo "
-        start on runlevel [2345]
+        start on (runlevel [2345] and started docker)
         stop on runlevel [!2345]
         respawn
 	exec ${INSTALL_DIR}/bin/flanneld --etcd-endpoints="http://${K8S_MASTER}:4001" --etcd-prefix="/flannel/network" --subnet-file="${INSTALL_DIR}/run/subnet.env" --ip-masq=true" > ${INSTALL_DIR}/unit_files/flanneld.conf
