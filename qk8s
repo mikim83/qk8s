@@ -284,7 +284,7 @@ function start_flannel_slave {
 function create_flannel_slave {
 	echo "INFO - Creating Flannel Slave Systemd Unit Files"
 	echo "[Unit]
-        Description="Flannel Slaver"
+        Description="Flannel Slave"
         Requires=docker.service
         After=docker.service
 	[Service]
@@ -308,40 +308,46 @@ function config_kubectl_master {
 
 }
 function config_kubectl_slave {
-
 	${K8S_CLIENT} config set-cluster qk8s-insecure --server=http://${K8S_MASTER}:8080
 	${K8S_CLIENT} config set-context qk8s-insecure --cluster=qk8s-insecure
-
-	#${K8S_CLIENT} config set-cluster qk8s --server=https://${K8S_MASTER} --certificate-authority=${INSTALL_DIR}/certs/ca.crt
-	#${K8S_CLIENT} config set-credentials qk8s --certificate-authority=${INSTALL_DIR}/certs/ca.crt --client-key=${INSTALL_DIR}/certs/kubecfg.key --client-certificate=${INSTALL_DIR}/certs/kubecfg.crt
-	#${K8S_CLIENT} config set-context qk8s --cluster=qk8s --user=qk8s
-
 	${K8S_CLIENT} config use-context qk8s-insecure
-
 }
 
 function stop_kubelet {
-	if [ -f ${INSTALL_DIR}/run/kubelet.pid ];then
-		echo "INFO - Killing kubelet"
-		kill -9 `cat ${INSTALL_DIR}/run/kubelet.pid`
-		rm ${INSTALL_DIR}/run/kubelet.pid
-	else
-		echo "WARNING - kubelet PID file not found. Performing a killall. Hold on your pants"
-		killall -9 kubelet
+        if [ -f /lib/systemd/system/kubelet.service ];then
+			systemctl stop kubelet
+			systemctl disable service.service
+        elif [ -f /etc/init/kubelet.conf ];then
+			initctl stop kubelet
+        else
+		if [ -f ${INSTALL_DIR}/run/kubelet.pid ];then
+			echo "INFO - Killing kubelet"
+			kill -9 `cat ${INSTALL_DIR}/run/kubelet.pid`
+			rm ${INSTALL_DIR}/run/kubelet.pid
+		else
+			echo "WARNING - kubelet PID file not found. Performing a killall. Hold on your pants"
+			killall -9 kubelet
+		fi
 	fi
 }
 function stop_flannel {
-	if [ -f ${INSTALL_DIR}/run/flanneld.pid ];then
-		echo "INFO - Killing flannel"
-		kill -9 `cat ${INSTALL_DIR}/run/flanneld.pid`
-		rm ${INSTALL_DIR}/run/flanneld.pid
-	else
-		echo "WARNING - flanneld PID file not found. Performing a killall. Hold on your pants"
-		killall -9 flanneld
+        if [ -f /lib/systemd/system/flanneld.service ];then
+                        systemctl stop flanneld
+                        systemctl disable flanneld.service
+        elif [ -f /etc/init/flanneld.conf ];then
+                        initctl stop flanneld
+        else
+		if [ -f ${INSTALL_DIR}/run/flanneld.pid ];then
+			echo "INFO - Killing flannel"
+			kill -9 `cat ${INSTALL_DIR}/run/flanneld.pid`
+			rm ${INSTALL_DIR}/run/flanneld.pid
+		else
+			echo "WARNING - flanneld PID file not found. Performing a killall. Hold on your pants"
+			killall -9 flanneld
+		fi
 	fi
 }
 function stop_k8s_containers {
-
 	k8s_containers=$(docker ps -aqf "name=k8s_")
 	echo "INFO - Stopping k8s_ containers"
 	if [ ! -z "$k8s_containers" ]; then
@@ -349,7 +355,6 @@ function stop_k8s_containers {
 		docker wait $k8s_containers > /dev/null 2>&1
 		docker rm -fv $k8s_containers > /dev/null 2>&1
 	fi
-
 }
 
 function start_kubernetes_master {
@@ -463,6 +468,8 @@ function init_kubernetes {
 		echo "Ubuntu $DISTRIB_RELEASE detected. Using systemd files"
 		cp -Rfp ${INSTALL_DIR}/unit_files/*.service /lib/systemd/system/
 		systemctl daemon-reload
+		systemctl enable flanneld
+		systemctl enable kubelet
 	else
 		echo "Ubuntu $DISTRIB_RELEASE detected. Using upstart files"
 		cp -Rfp ${INSTALL_DIR}/unit_files/*.conf /etc/init
