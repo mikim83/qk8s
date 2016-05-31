@@ -207,7 +207,7 @@ function create_kubelet_master {
 	[Install]
 	WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/kubelet.service
 
-        echo "description "Kubelet master"
+        echo "
 	start on runlevel [2345]
 	stop on runlevel [!2345]
 	respawn
@@ -268,7 +268,7 @@ function create_kubelet_slave {
         [Install]
         WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/kubelet.service
 
-        echo "description "Kubelet slave"
+        echo "
 	start on runlevel [2345]
 	stop on runlevel [!2345]
 	respawn
@@ -310,7 +310,7 @@ function create_flannel_master {
 	[Install]
 	WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/flanneld.service
 
-        echo "description "Flanneld master"
+        echo "
         start on runlevel [2345]
         stop on runlevel [!2345]
         respawn
@@ -340,7 +340,7 @@ function create_flannel_slave {
 	[Install]
 	WantedBy=multi-user.target" > ${INSTALL_DIR}/unit_files/flanneld.service
 
-        echo "description "Flanneld slave"
+        echo "
         start on runlevel [2345]
         stop on runlevel [!2345]
         respawn
