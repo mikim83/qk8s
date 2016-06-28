@@ -1,0 +1,52 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: k8s-prometheus
+  labels:
+    name: k8s-prometheus
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  minReadySeconds: 5
+  selector:
+    matchLabels:
+      name: k8s-prometheus
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: k8s-prometheus
+    spec:
+      containers:
+      - name: k8s-prometheus
+        image: oneboxtm/k8s-prometheus
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9090
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: 9090
+          initialDelaySeconds: 400
+          timeoutSeconds: 60
+        readinessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /status
+            port: 9090
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "1024Mi"
+            cpu: "1000m"
