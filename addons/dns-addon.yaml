@@ -39,6 +39,7 @@ spec:
     port: 53
     protocol: TCP
 
+---
 
 # Copyright 2016 The Kubernetes Authors.
 #
