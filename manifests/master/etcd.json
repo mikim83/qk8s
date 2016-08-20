@@ -7,13 +7,12 @@
     "containers": [
       {
         "name": "etcd",
-        "image": "gcr.io/google_containers/etcd:2.2.1",
+        "image": "gcr.io/google_containers/etcd:3.0.4",
         "command": [
-                "/usr/local/bin/etcd",
-                "--listen-client-urls=http://${K8S_HOSTNAME}:4001",
-                "--advertise-client-urls=http://${K8S_HOSTNAME}:4001",
-                "--data-dir=/var/etcd/data"
-        ],
+              "/bin/sh",
+              "-c",
+              "/usr/local/bin/etcd --name etcd-qk8s --listen-client-urls http://0.0.0.0:4001 --advertise-client-urls http://0.0.0.0:4001 --data-dir /var/etcd/data"
+            ],
         "volumeMounts": [
           {
             "name": "varetcd",
@@ -26,7 +25,7 @@
     "volumes":[
       {
         "name": "varetcd",
-        "emptyDir": {}
+        "path": "${INSTALL_DIR}/etcd"
       }
     ]
   }

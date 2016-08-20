@@ -103,7 +103,7 @@ function check_system {
 	command_exists docker
 
 	echo "INFO - Creating dirs"
-	mkdir -p ${INSTALL_DIR}/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs,unit_files}
+	mkdir -p ${INSTALL_DIR}/{bin,etc/kubernetes/manifests,logs,run,kubelet,certs,unit_files,etcd}
 
 	command_exists kubectl
 	download_flannel
